@@ -1,0 +1,497 @@
+library(CORElearn)
+
+## adapto h para poder usarlo con CORElearn
+
+setwd('d:\\Users\\ignacio\\Dropbox\\Publicaciones\\En proceso\\RIED')
+
+h <- read.csv('DataframeP2.csv',sep = ';')
+
+## reemplazo los NA por 0
+
+for(j in 4:ncol(h))
+{
+x <- which(is.na(h[,j]))
+h[x,j] <- 0
+}
+
+
+for(j in 4:ncol(h))
+{
+x <- which(is.nan(h[,j]))
+h[x,j] <- 0
+}
+
+colnames(h) <- gsub('.','',colnames(h),fixed=TRUE)
+
+## agrego a cada caso el valor de recupero del curso
+
+precios_cursos <- c(15000,12000,35000,10000)
+
+## valorización
+
+## valor del TP = preciocurso * prbrecupero - costo hora * tiempo recupero
+## valor del FP = - costo hora * tiempo recupero
+
+probabilidad_retencion <- .5
+costo_hora <- 1500
+tiempo_retencion <- .125
+
+costo_retencion <- costo_hora * tiempo_retencion
+
+valores_tp_cursos <- precios_cursos * probabilidad_retencion - costo_retencion
+
+valores_tp <- numeric(nrow(h))
+
+valores_tp[which(h$Curso=='DBI')] <- valores_tp_cursos[1]
+valores_tp[which(h$Curso=='DBD')] <- valores_tp_cursos[2]
+valores_tp[which(h$Curso=='PGP')] <- valores_tp_cursos[3]
+valores_tp[which(h$Curso=='R')] <- valores_tp_cursos[4]
+
+valores_tp <- as.data.frame(valores_tp)
+colnames(valores_tp)<- 'valores_tp'
+
+h <- cbind(h,valores_tp)
+
+## separo los cursos
+
+hdbi <- h[which(h$Curso == 'DBI'),]
+hdbd <- h[which(h$Curso == 'DBD'),]
+hpgp <- h[which(h$Curso == 'PGP'),]
+hr <- h[which(h$Curso == 'R'),]
+
+## separo en train y test
+
+x <- runif(nrow(h))
+h.train <- h[which(x<.7),]
+h.test <- h[which(x>=.7),]
+
+x <- runif(nrow(hdbi))
+hdbi.train <- hdbi[which(x<.7),]
+hdbi.test <- hdbi[which(x>=.7),]
+
+x <- runif(nrow(hdbd))
+hdbd.train <- hdbd[which(x<.7),]
+hdbd.test <- hdbd[which(x>=.7),]
+
+x <- runif(nrow(hpgp))
+hpgp.train <- hpgp[which(x<.7),]
+hpgp.test <- hpgp[which(x>=.7),]
+
+x <- runif(nrow(hr))
+hr.train <- hr[which(x<.7),]
+hr.test <- hr[which(x>=.7),]
+
+precision <- as.data.frame(numeric(35))
+sensibilidad <- as.data.frame(numeric(35))
+especificidad <- as.data.frame(numeric(35))
+algoritmo <- as.data.frame(character(35))
+conjunto <- as.data.frame(character(35))
+tps <- as.data.frame(numeric(35))
+fps <- as.data.frame(numeric(35))
+fns <- as.data.frame(numeric(35))
+tns <- as.data.frame(numeric(35))
+umbral <- as.data.frame(numeric(35))
+valor_recupero <- as.data.frame(numeric(35))
+eficiencia_recupero <- as.data.frame(numeric(35))
+
+algoritmos <- c("rf","rfNear","tree","knn","knnKernel","bayes","regTree")
+
+resultados <- cbind(algoritmo,conjunto,precision,sensibilidad,especificidad,tps,fps,fns,tns,umbral,valor_recupero,eficiencia_recupero)
+
+colnames(resultados) <- c("algoritmo","conjunto","precision","sensibilidad","especificidad","tps","fps","fns","tns","umbral","valor_recupero","eficiencia_recupero")
+
+conjuntos <- c("h","hdbi","hdbd","hpgp","hr")
+conjuntos.train <- list(h.train, hdbi.train, hdbd.train, hpgp.train, hr.train)
+conjuntos.test <- list(h.test, hdbi.test, hdbd.test, hpgp.test, hr.test)
+
+resultados$algoritmo <- as.vector(resultados$algoritmo)
+resultados$conjunto <- as.vector(resultados$conjunto)
+
+for(i in (1:5))
+{
+train <- conjuntos.train[[i]]
+test <- conjuntos.test[[i]]
+
+for(j in (1:6))
+{
+
+alg <- algoritmos[j]
+
+k <- i*7+j-7
+
+f <- Desertor ~  A2dasadm  +  A2dasbusqueda  +  A2dasclase  +  A2dascomentario  +  A2dasdescarga  +  A2dasentrega  +  A2dasexamen  +  A2dasforo  +  A2dasgrupo  +  A2dasinforme  +  A2daspublicar  +  A2dasvista  +  B4dasadm  +  B4dasbusqueda  +  B4dasclase  +  B4dascomentario  +  B4dasdescarga  +  B4dasentrega  +  B4dasexamen  +  B4dasforo  +  B4dasgrupo  +  B4dasinforme  +  B4daspublicar  +  B4dasvista  +  C6dasadm  +  C6dasbusqueda  +  C6dasclase  +  C6dascomentario  +  C6dasdescarga  +  C6dasentrega  +  C6dasexamen  +  C6dasforo  +  C6dasgrupo  +  C6dasinforme  +  C6daspublicar  +  C6dasvista  +  D8dasadm  +  D8dasbusqueda  +  D8dasclase  +  D8dascomentario  +  D8dasdescarga  +  D8dasentrega  +  D8dasexamen  +  D8dasforo  +  D8dasgrupo  +  D8dasinforme  +  D8daspublicar  +  D8dasvista  +  E10dasadm  +  E10dasbusqueda  +  E10dasclase  +  E10dascomentario  +  E10dasdescarga  +  E10dasentrega  +  E10dasexamen  +  E10dasforo  +  E10dasgrupo  +  E10dasinforme  +  E10daspublicar  +  E10dasvista  +  F12dasadm  +  F12dasbusqueda  +  F12dasclase  +  F12dascomentario  +  F12dasdescarga  +  F12dasentrega  +  F12dasexamen  +  F12dasforo  +  F12dasgrupo  +  F12dasinforme  +  F12daspublicar  +  F12dasvista  +  G14dasadm  +  G14dasbusqueda  +  G14dasclase  +  G14dascomentario  +  G14dasdescarga  +  G14dasentrega  +  G14dasexamen  +  G14dasforo  +  G14dasgrupo  +  G14dasinforme  +  G14daspublicar  +  G14dasvista
+
+t <- CoreModel(f,train , model = alg)
+
+p <- predict(t, newdata = test, type="both")
+
+mEval <- modelEval(t, test$Desertor, p$class, p$probabilities)
+
+resultados$algoritmo[k] <- t$model
+resultados$conjunto[k] <- conjuntos[i]
+resultados$precision[k] <- mEval$accuracy
+resultados$sensibilidad[k] <- mEval$sensitivity
+resultados$especificidad[k] <- mEval$specificity
+
+## Calculo el valor a recuperar máximo
+
+valor_a_recuperar_maximo <- sum(test$valores_tp * test$Desertor)
+
+## busco el mejor umbral
+
+valor_maximo <- 0
+umbral_maximo <- -1
+
+for(u in (0:100))
+{
+
+positivo <- numeric(nrow(test))
+positivo[] <- 0
+positivo[which(p$probabilities[,2]>u/100)] <- 1
+
+qtp <- length(which((p$probabilities[,2]>u/100) & (test$Desertor==1)))
+qfp <- length(which((p$probabilities[,2]>u/100) & (test$Desertor==0)))
+qfn <- length(which((p$probabilities[,2]<=u/100) & (test$Desertor==1)))
+qtn <- length(which((p$probabilities[,2]<=u/100) & (test$Desertor==0)))
+
+
+valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+if(valor>valor_maximo)
+{
+	valor_maximo <- valor
+	umbral_maximo <- u/100
+	resultados$tps[k] <- qtp
+	resultados$fps[k] <- qfp
+	resultados$fns[k] <- qfn
+	resultados$tns[k] <- qtn
+}
+}
+
+resultados$umbral[k] <- umbral_maximo
+resultados$valor_recupero[k] <- valor_maximo
+resultados$eficiencia_recupero[k] <- valor_maximo/valor_a_recuperar_maximo
+
+
+}
+}
+
+write.csv(resultados,"resultados_CORE.csv")
+
+
+## Rpart
+
+library(rpart)
+
+
+
+ajuste <-function(train, test,conjunto,k, resultados,costo_retencion)
+{
+
+metodos <- c('anova','class','poisson')
+cps <- c(.01,.001,.0001,.00001)
+
+valor_maximo <- 0
+umbral_maximo <- -1
+valor_a_recuperar_maximo <- sum(test$valores_tp * test$Desertor)
+
+for(j in 1:3)
+{
+	for(l in 1:4)
+	{
+
+		t <- rpart(formula = f, data = train, method = metodos[j], cp = cps[l])
+		p <- predict(t, newdata = test)
+	
+		if(j==2)
+		{
+		v <- as.vector(p[,2])
+		}
+		else
+		{
+		v <- as.vector(p)
+		}
+
+		## busco la mejor predicción
+
+		valor_maximo <- 0
+		umbral_maximo <- -1
+
+
+		for(u in (0:100))
+		{
+
+		positivo <- numeric(nrow(test))
+		positivo[] <- 0
+		positivo[which(v>u/100)] <- 1
+
+		qtp <- length(which((v>u/100) & (test$Desertor==1)))
+		qfp <- length(which((v>u/100) & (test$Desertor==0)))
+		qfn <- length(which((v<=u/100) & (test$Desertor==1)))
+		qtn <- length(which((v<=u/100) & (test$Desertor==0)))
+
+
+		valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+		if(valor>valor_maximo)
+		{
+			valor_maximo <- valor
+			umbral_maximo <- u/100
+			resultados$tps[k] <- qtp
+			resultados$fps[k] <- qfp
+			resultados$fns[k] <- qfn
+			resultados$tns[k] <- qtn
+			resultados$algoritmo[k] <- paste('rpart ',metodos[j],' ', cps[l], ' ', u)
+			resultados$conjunto[k] <- conjunto
+		}
+		}
+
+	resultados$umbral[k] <- umbral_maximo
+	resultados$valor_recupero[k] <- valor_maximo
+	resultados$eficiencia_recupero[k] <- valor_maximo/valor_a_recuperar_maximo
+	k = k + 1
+	}
+}
+resultados
+}
+
+rr <- as.data.frame(resultados[35,])
+rr <- rbind(rr,rr,rr)
+rr <- rbind(rr,rr,rr,rr)
+k <- 36
+
+for(m in 1:5)
+{
+	resultados <- rbind(resultados,rr)
+	resultados <- ajuste(conjuntos.train[[m]], conjuntos.test[[m]], conjuntos[m],k, resultados,costo_retencion)
+	k <- k+	12
+}
+
+write.csv(resultados,"resultados_CORE_rpart.csv")
+
+
+## redes neuronales
+
+library(neuralnet)
+
+## optimización de la red neuronal
+
+metodos <- c('rprop+','rprop-')
+ocultas <- c(1,2,5,10)
+
+resultadosnn <- as.data.frame(matrix(nrow = 40, ncol = 11))
+colnames(resultadosnn) <- c("metodo","ocultas","conjunto","tps","fps","fns","tns","valor","eficiencia","umbral","algoritmo")
+
+n = 1
+
+for(m in 1:5)
+{
+
+train <- conjuntos.train[[m]]
+test <- conjuntos.test[[m]]
+conjunto <- conjuntos[m]
+
+
+valor_maximo <- 0
+valor_a_recuperar_maximo <- sum(test$valores_tp * test$Desertor)
+
+for(j in 1:length(metodos))
+{
+	for(k in 1:length(ocultas))
+	{
+
+		nn <-neuralnet(formula = f, data = train, hidden = ocultas[k], algorithm = metodos[j],rep= 2)
+		pnn <- compute(nn,test)
+		v <- pnn$net.result
+
+		
+		valores <- numeric(101)
+		valor_maximo <- 0
+
+		for(i in (0:100)) 
+		{
+			umbral <- min(pnn$net.result)+(max(pnn$net.result)-min(pnn$net.result))*i/100
+			positivo <- numeric(nrow(test))
+			positivo[] <- 0
+			positivo[which(v>umbral)] <- 1
+
+			qtp <- length(which((v>umbral) & (test$Desertor==1)))
+			qfp <- length(which((v>umbral) & (test$Desertor==0)))
+			qfn <- length(which((v<=umbral) & (test$Desertor==1)))
+			qtn <- length(which((v<=umbral) & (test$Desertor==0)))
+
+			valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+			if(valor>valor_maximo)
+			{
+				valor_maximo <- valor
+				umbral_maximo <- umbral
+				resultadosnn$tps[n] <- qtp
+				resultadosnn$fps[n] <- qfp
+				resultadosnn$fns[n] <- qfn
+				resultadosnn$tns[n] <- qtn
+				resultadosnn$algoritmo[n] <- 'nn '
+				resultadosnn$conjunto[n] <- conjunto
+				resultadosnn$ocultas[n] <- ocultas[k]
+				resultadosnn$eficiencia[n] <- valor/valor_a_recuperar_maximo
+				resultadosnn$metodo[n] <- metodos[j]
+				resultadosnn$umbral[n] <- umbral
+			}
+		}
+		n <- n+1
+	}
+}
+}
+
+write.csv(resultadosnn,"resultadonn5.csv")
+
+resultadosnn
+
+
+
+## Aplico al curso de R el modelo que ajusta mejor al conjunto
+
+metodos <- 'rprop+'
+ocultas <- 10
+
+resultadosnn <- as.data.frame(matrix(nrow = 40, ncol = 11))
+colnames(resultadosnn) <- c("metodo","ocultas","conjunto","tps","fps","fns","tns","valor","eficiencia","umbral","algoritmo")
+
+n <- 1
+
+train <- conjuntos.train[[1]]
+test <- conjuntos.test[[1]]
+conjunto <- conjuntos[1]
+
+
+valor_maximo <- 0
+valor_a_recuperar_maximo <- sum(test$valores_tp * test$Desertor)
+
+
+nn <-neuralnet(formula = f, data = train, hidden = ocultas, algorithm = metodos,rep= 2)
+pnn <- compute(nn,test)
+v <- pnn$net.result
+
+		
+valores <- numeric(101)
+valor_maximo <- 0
+
+for(i in (0:100)) 
+{
+	umbral <- min(pnn$net.result)+(max(pnn$net.result)-min(pnn$net.result))*i/100
+	positivo <- numeric(nrow(test))
+	positivo[] <- 0
+	positivo[which(v>umbral)] <- 1
+
+	qtp <- length(which((v>umbral) & (test$Desertor==1)))
+	qfp <- length(which((v>umbral) & (test$Desertor==0)))
+	qfn <- length(which((v<=umbral) & (test$Desertor==1)))
+	qtn <- length(which((v<=umbral) & (test$Desertor==0)))
+
+	valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+	if(valor>valor_maximo)
+	{
+		valor_maximo <- valor
+		umbral_maximo <- umbral
+		resultadosnn$tps[n] <- qtp
+		resultadosnn$fps[n] <- qfp
+		resultadosnn$fns[n] <- qfn
+		resultadosnn$tns[n] <- qtn
+		resultadosnn$algoritmo[n] <- 'nn '
+		resultadosnn$conjunto[n] <- conjunto
+		resultadosnn$ocultas[n] <- ocultas
+		resultadosnn$eficiencia[n] <- valor/valor_a_recuperar_maximo
+		resultadosnn$metodo[n] <- metodos
+		resultadosnn$umbral[n] <- umbral
+	}
+}
+n <- n+1
+
+min_umbral <- min(v)
+max_umbral <- max(v)
+
+## Aplico el modelo al curso de R
+
+
+test <- conjuntos.test[[5]]
+conjunto <- conjuntos[5]
+
+
+valor_maximo <- 0
+valor_a_recuperar_maximo <- sum(test$valores_tp * test$Desertor)
+pnn <- compute(nn,test)
+v <- pnn$net.result
+
+# re-escalo el umbral
+
+umbral <- min(v) + (max(v)-min(v))*(umbral-min_umbral)/(max_umbral-min_umbral)
+		
+valores <- numeric(101)
+valor_maximo <- 0
+
+positivo <- numeric(nrow(test))
+positivo[] <- 0
+positivo[which(v>umbral)] <- 1
+
+qtp <- length(which((v>umbral) & (test$Desertor==1)))
+qfp <- length(which((v>umbral) & (test$Desertor==0)))
+qfn <- length(which((v<=umbral) & (test$Desertor==1)))
+qtn <- length(which((v<=umbral) & (test$Desertor==0)))
+
+valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+resultadosnn$tps[n] <- qtp
+resultadosnn$fps[n] <- qfp
+resultadosnn$fns[n] <- qfn
+resultadosnn$tns[n] <- qtn
+resultadosnn$algoritmo[n] <- 'nn '
+resultadosnn$conjunto[n] <- conjunto
+resultadosnn$ocultas[n] <- ocultas
+resultadosnn$eficiencia[n] <- valor/valor_a_recuperar_maximo
+resultadosnn$metodo[n] <- metodos
+resultadosnn$umbral[n] <- umbral
+
+n <- n+1
+
+valores <- numeric(101)
+valor_maximo <- 0
+
+for(i in (0:100)) 
+{
+	umbral <- min(pnn$net.result)+(max(pnn$net.result)-min(pnn$net.result))*i/100
+	positivo <- numeric(nrow(test))
+	positivo[] <- 0
+	positivo[which(v>umbral)] <- 1
+
+	qtp <- length(which((v>umbral) & (test$Desertor==1)))
+	qfp <- length(which((v>umbral) & (test$Desertor==0)))
+	qfn <- length(which((v<=umbral) & (test$Desertor==1)))
+	qtn <- length(which((v<=umbral) & (test$Desertor==0)))
+
+	valor <- sum(positivo * test$Desertor * test$valores_tp)  - qfp * costo_retencion
+
+	if(valor>valor_maximo)
+	{
+		valor_maximo <- valor
+		umbral_maximo <- umbral
+		resultadosnn$tps[n] <- qtp
+		resultadosnn$fps[n] <- qfp
+		resultadosnn$fns[n] <- qfn
+		resultadosnn$tns[n] <- qtn
+		resultadosnn$algoritmo[n] <- 'nn '
+		resultadosnn$conjunto[n] <- conjunto
+		resultadosnn$ocultas[n] <- ocultas
+		resultadosnn$eficiencia[n] <- valor/valor_a_recuperar_maximo
+		resultadosnn$metodo[n] <- metodos
+		resultadosnn$umbral[n] <- umbral
+	}
+}
+
+write.csv(resultadosnn,"resultadonnhvsr.csv")
+
+resultadosnn
+
+
+
+
